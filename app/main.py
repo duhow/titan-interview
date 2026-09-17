@@ -2,20 +2,28 @@ from fastapi import FastAPI, Depends, Response, HTTPException
 from sqlmodel import Session
 from sqlalchemy import text
 
+from typing import Annotated
+
 from app.database import get_session
 from app.models import User
 
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints
 from datetime import date, datetime
 
 class UserSignupBirthdateModel(BaseModel):
     birthdate: date
 
+# Limit the length to avoid abuse
+Username = Annotated[
+    str,
+    StringConstraints(pattern=r"^[A-Za-z]{3,32}$")
+]
+
 app = FastAPI()
 
 @app.put("/hello/{username}", status_code=204)
 async def create_user(
-    username: str,
+    username: Username,
     data: UserSignupBirthdateModel,
     session: Session = Depends(get_session),
 ):
@@ -54,7 +62,7 @@ def birthday_days_left(date: datetime) -> int:
 
 @app.get("/hello/{username}")
 async def get_user(
-    username: str,
+    username: Username,
     session: Session = Depends(get_session),
 ):
     user = session.get(User, username)
