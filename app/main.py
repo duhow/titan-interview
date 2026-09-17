@@ -1,42 +1,41 @@
-from fastapi import FastAPI, Response, HTTPException
+from fastapi import FastAPI, Depends, Response, HTTPException
+from sqlmodel import Session
+from sqlalchemy import text
+
+from app.database import get_session
+from app.models import User
+
 from pydantic import BaseModel
 from datetime import date, datetime
-
 
 class UserSignupBirthdateModel(BaseModel):
     birthdate: date
 
-class UserModel(UserSignupBirthdateModel):
-    username: str
-
-
 app = FastAPI()
 
-def make_error(message: str, response: Response, status_code: int = 400):
-    raise HTTPException(status_code=status_code, detail=message)
-
 @app.put("/hello/{username}", status_code=204)
-async def create_user(username: str, data: UserSignupBirthdateModel, response: Response):
+async def create_user(
+    username: str,
+    data: UserSignupBirthdateModel,
+    session: Session = Depends(get_session),
+):
 
-    try:
-        user_data = UserModel(
-            username=username,
-            birthdate=data.birthdate
-        )
-    except ValueError:
-        make_error("Invalid date", response)
+    user = User(
+        username=username,
+        birthdate=data.birthdate
+    )
 
     TODAY = datetime.now().date()
-    if user_data.birthdate > TODAY:
-        make_error("Cannot be born in the future!", response)
-    if user_data.birthdate.year < 1900:
-        make_error("Vampires are not allowed!", response, status_code=403)
+    if user.birthdate > TODAY:
+        raise HTTPException(400, "Cannot be born in the future!")
+    if user.birthdate.year < 1900:
+        raise HTTPException(403, "Vampires are not allowed!")
+    if session.get(User, username):
+        raise HTTPException(409, "User already exists!")
 
-    # TODO: insert into DB
-
-    if username == "exists":
-        response.status_code = 409
-        return {"message": "User already exists!"}
+    # insert into DB
+    session.add(user)
+    session.commit()
 
     return "" # HTTP 204 No content
 
@@ -51,25 +50,39 @@ def birthday_days_left(date: datetime) -> int:
     if next_birthday < TODAY:
         next_birthday = next_birthday.replace(year=TODAY.year + 1)
 
-    return (next_birthday - today).days
+    return (next_birthday - TODAY).days
 
 @app.get("/hello/{username}")
-async def get_user(username: str, response: Response):
-    # TODO: Get user from DB
-    user_data = UserModel(username=username, birthdate=datetime.strptime("1995-11-13", "%Y-%m-%d"))
+async def get_user(
+    username: str,
+    session: Session = Depends(get_session),
+):
+    user = session.get(User, username)
+    
+    if not user:
+        raise HTTPException(404, "User not found")
 
     messages = list()
-    messages.append(f"Hello, {user_data.username}!")
+    messages.append(f"Hello, {user.username}!")
 
-    days_left = birthday_days_left(user_data.birthdate)
+    days_left = birthday_days_left(user.birthdate)
     if days_left == 0:
         messages.append("Happy birthday!")
     else:
         messages.append(f"Your birthday is in {days_left} day(s)")
 
-    return {"message": messages.join(" ")}
+    return {"message": " ".join(messages)}
 
 @app.get("/healthz/startup")
-async def readiness():
-    # TODO: check database availability
+async def readiness(
+    session: Session = Depends(get_session),
+):
+    try:
+        session.exec(text("SELECT 1"))
+    except Exception:
+        raise HTTPException(
+            status_code=503,
+            detail="Database unavailable",
+        )
+
     return "OK"

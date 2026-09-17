@@ -34,6 +34,8 @@ COPY app/ .
 
 USER app
 
+VOLUME ["/data"]
+
 ENV PORT=8000 AWS_LWA_READINESS_CHECK_PATH=/healthz/startup
 EXPOSE ${PORT}
 ENTRYPOINT ["fastapi", "run"]
