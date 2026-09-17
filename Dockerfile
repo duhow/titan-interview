@@ -30,7 +30,11 @@ COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache,rw \
     pip install --no-compile -r requirements.txt
 
-COPY app/ .
+COPY app/ ./app/
+COPY alembic.ini ./
+COPY alembic/ ./alembic/
+
+RUN mkdir /data && chown app:app /data
 
 USER app
 
@@ -38,4 +42,4 @@ VOLUME ["/data"]
 
 ENV PORT=8000 AWS_LWA_READINESS_CHECK_PATH=/healthz/startup
 EXPOSE ${PORT}
-ENTRYPOINT ["fastapi", "run"]
+CMD ["sh", "-c", "alembic upgrade head && exec fastapi run app/main.py"]
