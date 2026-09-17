@@ -16,6 +16,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       ca-certificates \
     && useradd --uid 1001 --create-home app
 
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:1.1.0 /lambda-adapter /opt/extensions/lambda-adapter
+
 # -- Optimize image copy by squashing updated apps/libs
 FROM scratch AS build
 COPY --link --from=base / /
@@ -32,5 +34,6 @@ COPY app/ .
 
 USER app
 
-EXPOSE 8000
+ENV PORT=8000 AWS_LWA_READINESS_CHECK_PATH=/healthz/startup
+EXPOSE ${PORT}
 ENTRYPOINT ["fastapi", "run"]
