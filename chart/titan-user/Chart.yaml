@@ -22,3 +22,10 @@ version: 0.1.0
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
 appVersion: "2026.09.18"
+
+dependencies:
+  - name: mariadb
+    version: 28.0.0
+    repository: oci://registry-1.docker.io/bitnamicharts
+    alias: mysql
+    condition: mysql.enabled

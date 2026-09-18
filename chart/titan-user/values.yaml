@@ -28,6 +28,35 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+# External database connection. The bundled MariaDB is intended for local
+# development; enable this and set host and credentials for a remote
+# MySQL/MariaDB service in production.
+externalDatabase:
+  enabled: false
+  host: ""
+  port: 3306
+  name: titan
+  username: titan
+  secretName: titan-user-database
+  # Required only when databaseUrlKey is empty.
+  passwordKey: mariadb-password
+  # Optional full connection URL key in the same Secret. When empty, the URL
+  # is assembled from these values and $(DATABASE_PASSWORD) by Kubernetes.
+  databaseUrlKey: ""
+
+# Bitnami MariaDB dependency. Keep disabled for production deployments that use
+# externalDatabase.host to connect to a managed MySQL/MariaDB service.
+mysql:
+  enabled: false
+  auth:
+    database: titan
+    username: titan
+    existingSecret: titan-user-database
+  primary:
+    persistence:
+      enabled: true
+      size: 1Gi
+
 # This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
 serviceAccount:
   # Specifies whether a service account should be created.

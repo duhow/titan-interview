@@ -51,6 +51,25 @@ spec:
           {{- end }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            {{- if not .Values.externalDatabase.databaseUrlKey }}
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.externalDatabase.secretName }}
+                  key: {{ .Values.externalDatabase.passwordKey }}
+            {{- end }}
+            {{- $databaseHost := default (printf "%s-mysql" (include "titan-user.fullname" .)) .Values.externalDatabase.host }}
+            {{- if .Values.externalDatabase.databaseUrlKey }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.externalDatabase.secretName }}
+                  key: {{ .Values.externalDatabase.databaseUrlKey }}
+            {{- else }}
+            - name: DATABASE_URL
+              value: "mysql+pymysql://{{ .Values.externalDatabase.username }}:$(DATABASE_PASSWORD)@{{ $databaseHost }}:{{ .Values.externalDatabase.port }}/{{ .Values.externalDatabase.name }}"
+            {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.service.containerPort }}
