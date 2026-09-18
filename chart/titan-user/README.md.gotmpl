@@ -1,0 +1,142 @@
+# Titan User Helm Chart
+
+Deploy the Titan User API with Helm.
+
+This chart supports a local MariaDB dependency, a remote MySQL or MariaDB server, KEDA, Argo Rollouts, and Istio.
+
+## Requirements
+
+Install these tools before you use this chart:
+
+- Helm 3.
+- Access to `registry-1.docker.io` to download the MariaDB dependency.
+- A Kubernetes cluster with a default StorageClass when `mysql.enabled` is true.
+- An existing Secret named by `externalDatabase.secretName`.
+- The Secret must contain `externalDatabase.passwordKey` when `externalDatabase.databaseUrlKey` is empty.
+- The Secret must contain `externalDatabase.databaseUrlKey` when that key is set.
+- A KEDA installation when `autoscaling.keda.enabled` is true.
+- An Argo Rollouts installation when `rollout.enabled` is true.
+- Istio CRDs and an Istio installation when `istio.enabled` is true.
+
+## Install the chart
+
+Build the chart dependency first:
+
+```sh
+helm dependency build chart/titan-user
+```
+
+Create the database Secret. Use a password that matches the local MariaDB Secret when you enable `mysql`:
+
+```sh
+kubectl create secret generic titan-user-database \
+  --from-literal=mariadb-password='change-me' \
+  --from-literal=mariadb-replication-password='change-replication-me' \
+  --from-literal=mariadb-root-password='change-root-me'
+```
+
+Install the chart with the local database:
+
+```sh
+helm upgrade --install titan-user chart/titan-user \
+  --set mysql.enabled=true
+```
+
+The chart creates a 1GiB MariaDB volume by default. The API runs the Alembic migration before it starts.
+
+## Use a remote database
+
+Keep `mysql.enabled` false. Set the remote host and enable the external database:
+
+```yaml
+externalDatabase:
+  enabled: true
+  host: mysql.example.internal
+  port: 3306
+  name: titan
+  username: titan
+  secretName: titan-user-database
+  passwordKey: password
+```
+
+Create the Secret and install the chart with these values:
+
+```sh
+kubectl create secret generic titan-user-database \
+  --from-literal=password='replace-with-the-remote-password'
+
+helm upgrade --install titan-user chart/titan-user \
+  --set externalDatabase.enabled=true \
+  --set externalDatabase.host=mysql.example.internal \
+  --set externalDatabase.secretName=titan-user-database \
+  --set externalDatabase.passwordKey=password
+```
+
+If the Secret contains a complete URL, use `databaseUrlKey` instead:
+
+```yaml
+externalDatabase:
+  enabled: true
+  secretName: titan-user-database
+  databaseUrlKey: DATABASE_URL
+```
+
+Use this URL format:
+
+```text
+mysql+pymysql://<username>:<password>@<host>:<port>/<database>
+```
+
+For example:
+
+```sh
+kubectl create secret generic titan-user-database \
+  --from-literal=DATABASE_URL='mysql+pymysql://titan:replace-me@mysql.example.internal:3306/titan'
+```
+
+When `databaseUrlKey` is set, `passwordKey` is not required.
+
+## Use KEDA
+
+Set `autoscaling.enabled` and `autoscaling.keda.enabled` to true. Add at least one trigger:
+
+```yaml
+autoscaling:
+  enabled: true
+  keda:
+    enabled: true
+    triggers:
+      - type: cpu
+        metadata:
+          type: Utilization
+          value: "80"
+```
+
+## Use Argo Rollouts
+
+Set `kind` to `Deployment` and enable the rollout:
+
+```yaml
+kind: Deployment
+rollout:
+  enabled: true
+```
+
+Do not enable Rollouts with `kind: StatefulSet`.
+
+## Use Istio
+
+Enable Istio resources and provide the gateway and host:
+
+```yaml
+istio:
+  enabled: true
+  gateways:
+    - mesh
+  hosts:
+    - api.example.com
+```
+
+## Default values
+
+{{ template "chart.valuesSection" . }}
