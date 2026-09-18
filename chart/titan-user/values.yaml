@@ -2,8 +2,17 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+# Selects the workload resource kind. Supported values are Deployment and StatefulSet.
+kind: Deployment
+
 # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
 replicaCount: 1
+
+# StatefulSet-only settings. Each field is omitted unless configured.
+serviceName: ""
+podManagementPolicy: OrderedReady
+updateStrategy: {}
+volumeClaimTemplates: []
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
@@ -53,6 +62,8 @@ securityContext:
 service:
   # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
   type: ClusterIP
+  # Set to true to create a headless Service, recommended for StatefulSet pod DNS.
+  headless: false
   # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
   port: 80
   containerPort: 8000

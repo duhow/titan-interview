@@ -1,10 +1,21 @@
+{{- if not (has .Values.kind (list "Deployment" "StatefulSet")) }}
+{{- fail (printf "unsupported workload kind %q: must be Deployment or StatefulSet" .Values.kind) }}
+{{- end }}
 apiVersion: apps/v1
-kind: Deployment
+kind: {{ .Values.kind }}
 metadata:
   name: {{ include "titan-user.fullname" . }}
   labels:
     {{- include "titan-user.labels" . | nindent 4 }}
 spec:
+  {{- if eq .Values.kind "StatefulSet" }}
+  serviceName: {{ default (include "titan-user.fullname" .) .Values.serviceName }}
+  podManagementPolicy: {{ .Values.podManagementPolicy }}
+  {{- with .Values.updateStrategy }}
+  updateStrategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end }}
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
@@ -86,3 +97,7 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+{{ if and (eq .Values.kind "StatefulSet") .Values.volumeClaimTemplates }}
+  volumeClaimTemplates:
+    {{- toYaml .Values.volumeClaimTemplates | nindent 4 }}
+{{ end }}
