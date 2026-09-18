@@ -19,8 +19,13 @@ metadata:
     {{- include "titan-user.labels" $root | nindent 4 }}
 spec:
   scaleTargetRef:
+    {{- if .Values.rollout.enabled }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    {{- else }}
     apiVersion: apps/v1
     kind: {{ $root.Values.kind }}
+    {{- end }}
     name: {{ include "titan-user.fullname" $root }}
 
   {{- if $keda }}

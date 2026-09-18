@@ -1,0 +1,28 @@
+{{- if .Values.istio.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ include "titan-user.fullname" . }}
+  labels:
+    {{- include "titan-user.labels" . | nindent 4 }}
+spec:
+  gateways:
+    {{- toYaml .Values.istio.gateways | nindent 4 }}
+  hosts:
+    {{- toYaml .Values.istio.hosts | nindent 4 }}
+  http:
+    - route:
+        - destination:
+            host: {{ include "titan-user.fullname" . }}
+            port:
+              number: {{ .Values.service.port }}
+          {{ if .Values.rollout.enabled }}
+          weight: 100
+          subset: stable
+        - destination:
+            host: {{ include "titan-user.fullname" . }}
+            port:
+              number: {{ .Values.service.port }}
+          weight: 0
+          subset: canary
+          {{ end }}

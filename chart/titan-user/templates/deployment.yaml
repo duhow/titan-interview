@@ -16,7 +16,7 @@ spec:
     {{- toYaml . | nindent 4 }}
   {{- end }}
   {{- end }}
-  {{- if not .Values.autoscaling.enabled }}
+  {{- if and (not .Values.autoscaling.enabled) (not .Values.rollout.enabled) }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:

@@ -1,0 +1,25 @@
+{{- if .Values.rollout.enabled }}
+{{- if ne .Values.kind "Deployment" }}
+{{- fail "rollout.enabled is only supported when kind is Deployment" }}
+{{- end }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: {{ include "titan-user.fullname" . }}
+  labels:
+    {{- include "titan-user.labels" . | nindent 4 }}
+spec:
+  workloadRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "titan-user.fullname" . }}
+    scaleDown: onsuccess
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  strategy:
+    canary:
+      {{- with .Values.rollout.canary.steps }}
+      steps:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

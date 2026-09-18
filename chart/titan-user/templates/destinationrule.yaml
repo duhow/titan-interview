@@ -1,0 +1,20 @@
+{{- if .Values.istio.enabled }}
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: {{ include "titan-user.fullname" . }}
+  labels:
+    {{- include "titan-user.labels" . | nindent 4 }}
+spec:
+  host: {{ include "titan-user.fullname" . }}
+  {{- if .Values.rollout.enabled }}
+  subsets:
+    - name: stable
+      labels:
+        {{- include "titan-user.selectorLabels" . | nindent 8 }}
+        rollouts-pod-template-hash: stable
+    - name: canary
+      labels:
+        {{- include "titan-user.selectorLabels" . | nindent 8 }}
+        rollouts-pod-template-hash: canary
+  {{- end }}
