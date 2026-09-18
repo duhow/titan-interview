@@ -1,32 +1,85 @@
-{{- if .Values.autoscaling.enabled }}
+{{- $root := . -}}
+{{- $autoscaling := .Values.autoscaling -}}
+{{- $keda := $autoscaling.keda.enabled -}}
+{{- if $autoscaling.enabled }}
+{{- if and $keda (empty $autoscaling.keda.triggers) }}
+{{- fail "autoscaling.keda.triggers must contain at least one trigger when KEDA is enabled" }}
+{{- end }}
+---
+{{- if $keda }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+{{- else }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
+{{- end }}
 metadata:
-  name: {{ include "titan-user.fullname" . }}
+  name: {{ include "titan-user.fullname" $root }}
   labels:
-    {{- include "titan-user.labels" . | nindent 4 }}
+    {{- include "titan-user.labels" $root | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
-    kind: {{ .Values.kind }}
-    name: {{ include "titan-user.fullname" . }}
-  minReplicas: {{ .Values.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+    kind: {{ $root.Values.kind }}
+    name: {{ include "titan-user.fullname" $root }}
+
+  {{- if $keda }}
+  {{- with $autoscaling.keda.pollingInterval }}
+  pollingInterval: {{ . }}
+  {{- end }}
+  {{- with $autoscaling.keda.cooldownPeriod }}
+  cooldownPeriod: {{ . }}
+  {{- end }}
+  {{- with $autoscaling.keda.initialCooldownPeriod }}
+  initialCooldownPeriod: {{ . }}
+  {{- end }}
+  {{- with $autoscaling.keda.idleReplicaCount }}
+  idleReplicaCount: {{ . }}
+  {{- end }}
+  {{- if hasKey $autoscaling.keda "minReplicaCount" }}
+    {{- if ne $autoscaling.keda.minReplicaCount nil }}
+  minReplicaCount: {{ $autoscaling.keda.minReplicaCount }}
+    {{- else if gt $autoscaling.minReplicas 0 }}
+  minReplicaCount: {{ $autoscaling.minReplicas }}
+    {{- end }}
+  {{- end }}
+  {{- if hasKey $autoscaling.keda "maxReplicaCount" }}
+    {{- if ne $autoscaling.keda.maxReplicaCount nil }}
+  maxReplicaCount: {{ $autoscaling.keda.maxReplicaCount }}
+    {{- else if gt $autoscaling.maxReplicas 0 }}
+  maxReplicaCount: {{ $autoscaling.maxReplicas }}
+    {{- end }}
+  {{- end }}
+  {{- with $autoscaling.keda.fallback }}
+  fallback:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $autoscaling.keda.advanced }}
+  advanced:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  triggers:
+    {{- toYaml $autoscaling.keda.triggers | nindent 4 }}
+
+  {{- else }}{{/* HorizontalPodAutoscaler */}}
+  minReplicas: {{ $autoscaling.minReplicas }}
+  maxReplicas: {{ $autoscaling.maxReplicas }}
   metrics:
-    {{- if .Values.autoscaling.targetCPUUtilizationPercentage }}
+  {{- if $autoscaling.targetCPUUtilizationPercentage }}
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
-    {{- end }}
-    {{- if .Values.autoscaling.targetMemoryUtilizationPercentage }}
+          averageUtilization: {{ $autoscaling.targetCPUUtilizationPercentage }}
+  {{- end }}
+  {{- if $autoscaling.targetMemoryUtilizationPercentage }}
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: {{ .Values.autoscaling.targetMemoryUtilizationPercentage }}
-    {{- end }}
+          averageUtilization: {{ $autoscaling.targetMemoryUtilizationPercentage }}
+  {{- end }}
+  {{- end }}{{/* HorizontalPodAutoscaler */}}
 {{- end }}
