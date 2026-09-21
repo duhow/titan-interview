@@ -1,0 +1,12 @@
+# Local K3s development values.
+# Create titan-user-database before installing; the bundled MariaDB uses it.
+
+image:
+  pullPolicy: IfNotPresent
+
+mysql:
+  enabled: true
+  primary:
+    persistence:
+      enabled: true
+      size: 1Gi
