@@ -18,3 +18,4 @@ spec:
         {{- include "titan-user.selectorLabels" . | nindent 8 }}
         rollouts-pod-template-hash: canary
   {{- end }}
+{{- end }}

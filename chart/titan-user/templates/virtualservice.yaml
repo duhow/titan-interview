@@ -16,7 +16,7 @@ spec:
             host: {{ include "titan-user.fullname" . }}
             port:
               number: {{ .Values.service.port }}
-          {{ if .Values.rollout.enabled }}
+          {{- if .Values.rollout.enabled }}
           weight: 100
           subset: stable
         - destination:
@@ -25,4 +25,5 @@ spec:
               number: {{ .Values.service.port }}
           weight: 0
           subset: canary
-          {{ end }}
+          {{- end }}
+{{- end }}
