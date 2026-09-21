@@ -22,7 +22,7 @@ def upgrade() -> None:
     """Create the application user table."""
     op.create_table(
         "user",
-        sa.Column("username", sa.String(), nullable=False),
+        sa.Column("username", sa.String(length=32), nullable=False),
         sa.Column("birthdate", sa.Date(), nullable=False),
         sa.PrimaryKeyConstraint("username"),
     )
