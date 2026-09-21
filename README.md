@@ -4,6 +4,8 @@ This repository contains an application that queries and stores usernames and it
 
 Unless configured, the data is stored locally in an SQLite database.
 
+:memo: [Architecture](./ARCHITECTURE.md)
+
 ### Example requests
 
 ```sh
